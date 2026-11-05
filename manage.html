@@ -18,6 +18,7 @@ button:disabled{opacity:.5;cursor:wait}.secondary{color:#ffe6b9;background:#2920
 @media(max-width:620px){.grid{grid-template-columns:1fr}}footer{border-top:1px solid #68563c;text-align:center;padding:20px;color:#bea987}
 </style></head><body><header><div class="wrap"><strong>INTENTIONAL NOISE · ARTIST PAGE MANAGER</strong><a href="/">← Artist Showcases</a></div></header>
 <main class="wrap"><h1>Your music. Your public page.</h1><p>Use the <strong>same account you already have on Connect</strong>. Artist profiles, instruments and roles come from Connect; only your approved public information appears on .band.</p>
+<nav class="panel" aria-label="Profile and page navigation" style="display:flex;gap:10px;flex-wrap:wrap"><a class="button secondary" id="myPublicPageNav" aria-disabled="true" href="artists.html">1. Public view of my band page</a><a class="button" href="manage.html">2. Edit my public band page</a><a class="button secondary" href="https://connect.intentionalnoise.info/auth.html#profile">3. Edit my Connect page</a><p id="publicPageNavNote" style="width:100%;margin:0">Sign in to see your published band page.</p></nav>
 <section class="panel" id="signInPanel"><h2>Sign in with your Connect account</h2><form id="loginForm"><label for="email">Email</label><input id="email" type="email" autocomplete="email" required><label for="password">Password</label><input id="password" type="password" autocomplete="current-password" required><div class="actions"><button type="submit" id="loginBtn">Sign in</button><button type="button" id="googleLogin" class="secondary">Sign in with Google</button><a class="button secondary" href="https://connect.intentionalnoise.info/auth.html">Create a free Connect account</a></div></form><p id="loginStatus" class="status" role="status"></p><p>Existing accounts only. Registration and collaboration are handled by Connect.</p></section>
 <section class="hidden" id="editor">
 <div class="panel"><div class="actions"><button type="button" id="signOut" class="secondary">Sign out</button><a class="button secondary" href="https://connect.intentionalnoise.info/search.html">Find collaborators on Connect ↗</a></div><p id="memberEmail"></p><h2>Your Connect musician profile</h2><p>Changes saved here also update your Connect musician information. Only publicly published pages appear in .band's artist directory.</p>
@@ -59,7 +60,7 @@ async function load(){
  if(pageError){status('publishStatus','Page error: '+pageError.message);return}
  artistPage=page;
  if(!page){status('publishStatus','Save your Connect musician profile to generate your private artist page.');return}
- $('pageSlug').value=page.slug;
+ $('pageSlug').value=page.slug;const navPublic=$('myPublicPageNav');navPublic.href=page.published?'https://intentionalnoise.band/public-artist.html?slug='+encodeURIComponent(page.slug):'artists.html';navPublic.setAttribute('aria-disabled',String(!page.published));$('publicPageNavNote').textContent=page.published?'View what visitors see of your published artist page.':'Publish your page below before the public-view link becomes available.';
  $('pageStatus').textContent=page.published?'Published':'Private draft';
  const url='https://intentionalnoise.band/public-artist.html?slug='+encodeURIComponent(page.slug);
  $('publicAnchor').href=url;show('publicLink',page.published);
