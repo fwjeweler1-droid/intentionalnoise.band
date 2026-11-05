@@ -18,7 +18,7 @@ button:disabled{opacity:.5;cursor:wait}.secondary{color:#ffe6b9;background:#2920
 @media(max-width:620px){.grid{grid-template-columns:1fr}}footer{border-top:1px solid #68563c;text-align:center;padding:20px;color:#bea987}
 </style></head><body><header><div class="wrap"><strong>INTENTIONAL NOISE · ARTIST PAGE MANAGER</strong><a href="/">← Artist Showcases</a></div></header>
 <main class="wrap"><h1>Your music. Your public page.</h1><p>Use the <strong>same account you already have on Connect</strong>. Artist profiles, instruments and roles come from Connect; only your approved public information appears on .band.</p>
-<section class="panel" id="signInPanel"><h2>Sign in with your Connect account</h2><form id="loginForm"><label for="email">Email</label><input id="email" type="email" autocomplete="email" required><label for="password">Password</label><input id="password" type="password" autocomplete="current-password" required><div class="actions"><button type="submit" id="loginBtn">Sign in</button><a class="button secondary" href="https://connect.intentionalnoise.info/auth.html">Create a free Connect account</a></div></form><p id="loginStatus" class="status" role="status"></p><p>Existing accounts only. Registration and collaboration are handled by Connect.</p></section>
+<section class="panel" id="signInPanel"><h2>Sign in with your Connect account</h2><form id="loginForm"><label for="email">Email</label><input id="email" type="email" autocomplete="email" required><label for="password">Password</label><input id="password" type="password" autocomplete="current-password" required><div class="actions"><button type="submit" id="loginBtn">Sign in</button><button type="button" id="googleLogin" class="secondary">Sign in with Google</button><a class="button secondary" href="https://connect.intentionalnoise.info/auth.html">Create a free Connect account</a></div></form><p id="loginStatus" class="status" role="status"></p><p>Existing accounts only. Registration and collaboration are handled by Connect.</p></section>
 <section class="hidden" id="editor">
 <div class="panel"><div class="actions"><button type="button" id="signOut" class="secondary">Sign out</button><a class="button secondary" href="https://connect.intentionalnoise.info/search.html">Find collaborators on Connect ↗</a></div><p id="memberEmail"></p><h2>Your Connect musician profile</h2><p>Changes saved here also update your Connect musician information. Only publicly published pages appear in .band's artist directory.</p>
 <form id="profileForm"><label for="name">Artist or band name</label><input id="name" maxlength="80" minlength="2" required>
@@ -69,6 +69,7 @@ async function load(){
 }
 $('loginForm').addEventListener('submit',async e=>{e.preventDefault();$('loginBtn').disabled=true;status('loginStatus','Signing in…');
  try{const {error}=await db.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(error)throw error;$('password').value='';status('loginStatus','');await load()}catch(err){status('loginStatus',err.message||'Could not sign in.')}finally{$('loginBtn').disabled=false}});
+$('googleLogin').addEventListener('click',async()=>{status('loginStatus','Opening Google sign-in…');const {error}=await db.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+'/manage.html'}});if(error)status('loginStatus',error.message);});
 $('signOut').addEventListener('click',async()=>{await db.auth.signOut();activeUser=null;artistPage=null;await load()});
 $('profileForm').addEventListener('submit',async e=>{e.preventDefault();if(!activeUser)return;const name=$('name').value.trim();if(name.length<2)return status('profileStatus','Artist name must contain at least two characters.');
 $('saveProfile').disabled=true;status('profileStatus','Saving to Connect…');
@@ -80,7 +81,7 @@ $('saveSlug').disabled=true;const {error}=await db.from('artist_pages').update({
 status('publishStatus',error?'Address not saved: '+error.message:'Page address saved.');$('saveSlug').disabled=false;if(!error)await load()});
 async function visibility(publicPage){if(!activeUser||!artistPage)return;if(publicPage&&!$('agree').checked)return status('publishStatus','Confirm the public-content rules first.');
 $('publish').disabled=true;$('unpublish').disabled=true;status('publishStatus',publicPage?'Publishing your text-only artist page…':'Taking your artist page offline…');
-const {data,error}=await db.rpc('set_my_artist_page_visibility',{desired_public:publicPage,agrees_to_rules:publicPage&&$('agree').checked});
+const {data,error}=await db.rpc('set_my_artist_page_publication',{p_publish:publicPage,p_accept_rules:publicPage&&$('agree').checked});
 status('publishStatus',error?'Request failed: '+error.message:publicPage?'Your public artist page is published.':'Your page is no longer publicly listed.');
 await load();}
 $('publish').addEventListener('click',()=>visibility(true));$('unpublish').addEventListener('click',()=>visibility(false));
