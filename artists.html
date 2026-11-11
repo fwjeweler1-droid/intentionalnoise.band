@@ -8,21 +8,35 @@ function initials(name){const words=String(name||'Artist').trim().split(/\s+/).f
 function visual(p,publicArt){
  const frame=document.createElement('div');frame.className='artwork';frame.setAttribute('role','img');frame.setAttribute('aria-label',p.display_name+' artwork or artist placeholder');
  const monogram=document.createElement('span');monogram.className='initials';monogram.textContent=initials(p.display_name);frame.append(monogram);
- const urls=[...new Set([p.logo_url,p.showcase_type==='image'?p.showcase_url:null,...(publicArt.get(p.user_id)||[])].map(httpsImage).filter(Boolean))];
+ const extra=publicArt.get(p.user_id)||{logos:[],artwork:[]};
+ const urls=[...new Set([...extra.logos,p.logo_url,p.showcase_type==='image'?p.showcase_url:null,...extra.artwork].map(httpsImage).filter(Boolean))];
  if(!urls.length)return frame;
- const img=document.createElement('img');img.alt=p.display_name+' published artwork';img.loading='lazy';img.referrerPolicy='no-referrer';
+ const img=document.createElement('img');img.alt=p.display_name+' published artist image';img.loading='lazy';img.referrerPolicy='no-referrer';
  let index=0;img.onerror=()=>{if(index<urls.length)img.src=urls[index++];else img.remove()};frame.append(img);img.src=urls[index++];return frame;
 }
 async function publicArtwork(profiles){
  const ids=new Set(profiles.map(p=>p.user_id).filter(Boolean)),map=new Map();if(!ids.size)return map;
  const [mediaResult,releaseResult]=await Promise.all([
-  db.from('artist_media_submissions').select('user_id,kind,mime_type,public_url,external_url,created_at').eq('kind','artwork').eq('status','approved').eq('rights_confirmed',true).eq('rules_accepted',true).order('created_at',{ascending:true}).limit(1000),
+  db.from('artist_media_submissions').select('user_id,kind,mime_type,source_type,storage_path,public_url,external_url,created_at').in('kind',['logo','artwork']).eq('status','approved').eq('rights_confirmed',true).eq('rules_accepted',true).order('created_at',{ascending:true}).limit(1000),
   db.from('frog_releases').select('owner_id,image_url,created_at').eq('is_published',true).order('created_at',{ascending:true}).limit(1000)
  ]);
- const add=(owner,url,created)=>{const safe=httpsImage(url);if(!ids.has(owner)||!safe)return;const rows=map.get(owner)||[];rows.push({url:safe,time:Date.parse(created||'')||0});map.set(owner,rows)};
- for(const row of mediaResult.data||[]){if(row.mime_type&&!row.mime_type.startsWith('image/'))continue;add(row.user_id,row.public_url||row.external_url,row.created_at)}
- for(const row of releaseResult.data||[])add(row.owner_id,row.image_url,row.created_at);
- for(const [id,rows] of map)map.set(id,[...new Set(rows.sort((a,b)=>a.time-b.time).map(v=>v.url))]);
+ const collected=new Map();
+ const add=(owner,url,created,kind)=>{const safe=httpsImage(url);if(!ids.has(owner)||!safe)return;const rows=collected.get(owner)||[];rows.push({url:safe,time:Date.parse(created||'')||0,kind});collected.set(owner,rows)};
+ await Promise.all((mediaResult.data||[]).map(async row=>{
+  if(row.mime_type&&!row.mime_type.startsWith('image/'))return;
+  let url=row.public_url||row.external_url;
+  if(row.source_type==='upload'&&row.storage_path){
+   const {data,error}=await db.storage.from('artist-review').createSignedUrl(row.storage_path,600);
+   url=error?null:data?.signedUrl;
+  }
+  add(row.user_id,url,row.created_at,row.kind)
+ }));
+ for(const row of releaseResult.data||[])add(row.owner_id,row.image_url,row.created_at,'artwork');
+ for(const [id,rows] of collected){
+  const logos=rows.filter(r=>r.kind==='logo').sort((a,b)=>b.time-a.time).map(r=>r.url);
+  const artwork=rows.filter(r=>r.kind!=='logo').sort((a,b)=>a.time-b.time).map(r=>r.url);
+  map.set(id,{logos:[...new Set(logos)],artwork:[...new Set(artwork)]});
+ }
  return map;
 }
 
