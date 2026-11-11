@@ -93,13 +93,34 @@ async function loadArtistSharedMedia(p){
   }
  }catch(e){const note=document.createElement('p');note.textContent='Artist media are temporarily unavailable.';area.append(note);}
 }
+async function loadArtistHeroImage(p){
+ const image=$('brandLogo'),fallback=image.src,urls=[];
+ const {data,error}=await supabase.from('artist_media_submissions')
+  .select('kind,source_type,storage_path,external_url,public_url,mime_type,created_at')
+  .eq('user_id',p.user_id).in('kind',['logo','artwork']).eq('status','approved')
+  .eq('rights_confirmed',true).eq('rules_accepted',true).order('created_at',{ascending:false}).limit(50);
+ const records=error?[]:(data||[]);
+ async function mediaUrl(row){
+  if(row.mime_type&&!row.mime_type.startsWith('image/'))return null;
+  if(row.source_type!=='upload')return safeUrl(row.external_url||row.public_url);
+  if(!row.storage_path)return null;
+  const {data:link,error:linkError}=await supabase.storage.from('artist-review').createSignedUrl(row.storage_path,600);
+  return linkError?null:safeUrl(link?.signedUrl);
+ }
+ for(const row of records.filter(r=>r.kind==='logo')){const url=await mediaUrl(row);if(url&&!urls.includes(url))urls.push(url)}
+ const stored=safeUrl(p.logo_url);if(stored&&!urls.includes(stored))urls.push(stored);
+ for(const row of records.filter(r=>r.kind==='artwork').reverse()){const url=await mediaUrl(row);if(url&&!urls.includes(url))urls.push(url)}
+ let position=0;
+ image.onerror=()=>{if(position<urls.length)image.src=urls[position++];else{image.onerror=null;image.src=fallback}};
+ if(urls.length)image.src=urls[position++];
+}
 async function showArtist(p){
  $('name').textContent=(p.display_name||'Artist').slice(0,100);
  $('bio').textContent=(p.bio||'').slice(0,2000);
  document.title=$('name').textContent+' | Official Artist Page · IntentionalNoise.band';
  document.querySelector('.demo').remove();
  showDetails(p);
- if(p.logo_url){const logo=safeUrl(p.logo_url);if(logo)$('brandLogo').src=logo}
+ await loadArtistHeroImage(p)
  addPrimaryMedia(p);
  $('connectLink').href='https://connect.intentionalnoise.info/show-your-work.html?member='+encodeURIComponent(p.user_id);
  await loadArtistSharedMedia(p);
