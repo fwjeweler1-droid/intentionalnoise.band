@@ -18,7 +18,7 @@ function showDetails(p){
   section.append(heading,badges);area.append(section);
  }
  if(p.available_for_gigs){const para=document.createElement('p');para.textContent='Available for gigs';area.append(para)}
- if(!area.hasChildNodes())area.textContent='More artist details coming soon.';
+ if(!area.hasChildNodes())area.textContent='Additional artist information is shared when the artist chooses to publish it.';
 }
 function addPrimaryMedia(p){
  const area=$('mediaArea');area.replaceChildren();
