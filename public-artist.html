@@ -134,8 +134,11 @@ async function showArtist(p){
  $('connectLink').href='https://connect.intentionalnoise.info/show-your-work.html?member='+encodeURIComponent(p.user_id);
  $('artistShop').hidden=true;
  try{
-   const {data:shop,error:shopError}=await supabase.from('artist_storefronts').select('cart_url,is_public').eq('user_id',p.user_id).eq('is_public',true).maybeSingle();
-   if(!shopError&&shop?.is_public){
+   const {data:shops,error:shopError}=await supabase.rpc('list_published_artist_shops',{
+     p_artist_ids:[p.user_id]
+   });
+   const shop=shops?.[0];
+   if(!shopError&&shop){
      const url=new URL(shop.cart_url);
      if(url.protocol==='https:'&&!url.username&&!url.password){$('artistShop').href=url.href;$('artistShop').hidden=false;}
    }
