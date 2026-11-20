@@ -1,0 +1,3 @@
+# Prevent the staging Worker preview from being indexed.
+https://intentionalnoise-band.intntnlnoise.workers.dev/*
+  X-Robots-Tag: noindex, nofollow, nosnippet
