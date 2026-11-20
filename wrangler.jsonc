@@ -6,3 +6,4 @@
     "directory": "./public"
   }
 }
+// Deployment verification: only public/ is served; original GitHub Pages remains live until approved cutover.
