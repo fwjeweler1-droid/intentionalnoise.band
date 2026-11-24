@@ -1,0 +1,9 @@
+{
+  "name": "intentionalnoise-band",
+  "compatibility_date": "2026-11-19",
+  "workers_dev": true,
+  "assets": {
+    "directory": "./public"
+  }
+}
+// Deployment verification: only public/ is served; original GitHub Pages remains live until approved cutover.
